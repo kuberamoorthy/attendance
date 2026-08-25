@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Attendance System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-animation">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
+
+    <!-- Login Screen -->
+    <main class="login-container" id="loginView">
+        <div class="glass-panel login-box">
+            <div class="login-header">
+                <img src="image.png" alt="AVVMSC Logo" class="login-logo" onerror="this.src='https://placehold.co/100x100?text=Logo'">
+                <h2>Welcome Back</h2>
+                <p>AVVMSC POONDIANZ BCA</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" id="username" placeholder="Enter username" required autocomplete="username">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="password" placeholder="Enter password" required autocomplete="current-password">
+                    </div>
+                </div>
+                <p id="loginError" class="error-msg hidden">Invalid username or password</p>
+                <button type="submit" class="primary-btn login-btn w-full mt-2">Login</button>
+            </form>
+        </div>
+    </main>
+
+    <main class="app-container hidden" id="mainAppView">
+        <header class="glass-panel header">
+            <div class="logo">
+                <img src="image.png" alt="Logo" class="app-logo" onerror="this.src='https://placehold.co/50x50?text=Logo'">
+                <h1>Attendance Portal</h1>
+            </div>
+            <div class="header-actions">
+                <div class="date-selection">
+                    <input type="date" id="selectedDate" class="date-picker" title="Select Date for Attendance">
+                </div>
+                <button id="viewLogsBtn" class="secondary-btn header-btn" title="Saved Attendance Logs"><i class="fa-solid fa-table-list"></i> Logs</button>
+                <button id="lockSystemBtn" class="secondary-btn header-btn danger-btn" title="Lock System"><i class="fa-solid fa-lock"></i> Lock</button>
+            </div>
+        </header>
+
+        <section id="dayOrderSelection" class="glass-panel section-container">
+            <h2>Select Day Order</h2>
+            <div class="day-order-grid">
+                <button class="day-btn" data-day="I">I</button>
+                <button class="day-btn" data-day="II">II</button>
+                <button class="day-btn" data-day="III">III</button>
+                <button class="day-btn" data-day="IV">IV</button>
+                <button class="day-btn" data-day="V">V</button>
+                <button class="day-btn" data-day="VI">VI</button>
+            </div>
+        </section>
+
+        <section id="logsView" class="glass-panel section-container hidden">
+            <div class="section-header">
+                <button class="back-btn" id="backFromLogs"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                <h2>Saved Attendance Logs</h2>
+            </div>
+            <div class="table-container">
+                <table class="logs-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Day Order</th>
+                            <th>Hours Recorded</th>
+                            <th>Avg Present</th>
+                            <th>Avg Absent</th>
+                            <th>Overall %</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody">
+                        <!-- Logs dynamically injected -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="scheduleView" class="glass-panel section-container hidden">
+            <div class="section-header">
+                <button class="back-btn" id="backToDays"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                <h2>Day Order <span id="currentDayOrder"></span> Schedule</h2>
+            </div>
+            <div class="timeline" id="timelineContainer">
+                <!-- Schedule cards will be dynamically injected here -->
+            </div>
+        </section>
+
+        <section id="attendanceView" class="glass-panel section-container hidden">
+             <div class="section-header">
+                <button class="back-btn" id="backToSchedule"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                <div class="class-info flex-grow">
+                    <h2 id="attHour"></h2>
+                    <p id="attSubject"></p>
+                </div>
+                <button class="icon-btn" id="openAddStudentModalBtn" title="Add Student"><i class="fa-solid fa-plus"></i></button>
+            </div>
+            <div class="students-list" id="studentsList">
+                <!-- Students will be dynamically injected here -->
+            </div>
+            <div class="action-footer">
+                <button id="submitAttendanceBtn" class="primary-btn">Save Hour Attendance</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="success-icon">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <h3>Attendance Saved!</h3>
+            <p>Data has been successfully saved to Firebase.</p>
+            <button class="primary-btn w-full" id="closeModalBtn">Continue</button>
+        </div>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div id="addStudentModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 class="modal-title">Add New Student</h3>
+            <div class="input-group text-left mb-1">
+                <label for="newStudentRoll">Roll Number / ID</label>
+                <input type="text" id="newStudentRoll" placeholder="e.g. 109" class="simple-input">
+            </div>
+            <div class="input-group text-left mb-2">
+                <label for="newStudentName">Student Name</label>
+                <input type="text" id="newStudentName" placeholder="e.g. John Doe" class="simple-input">
+            </div>
+            <div class="flex-gap-1">
+                <button class="secondary-btn flex-1" id="cancelAddStudentBtn">Cancel</button>
+                <button class="primary-btn flex-1" id="confirmAddStudentBtn">Add Student</button>
+            </div>
+        </div>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
