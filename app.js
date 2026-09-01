@@ -47,7 +47,7 @@ const schedules = {
 };
 
 // Full Students List
-const dummyStudents = [
+let dummyStudents = JSON.parse(localStorage.getItem('students')) || [
     { id: '25CAC201', name: 'SRIRAM S' },
     { id: '25CAC202', name: 'LONG ABSENT' },
     { id: '25CAC203', name: 'ABISHEK V' },
@@ -108,18 +108,17 @@ const dummyStudents = [
     { id: '25CAD210', name: 'PRIYADHARSHAN' }
 ];
 
+function saveStudents() {
+    localStorage.setItem('students', JSON.stringify(dummyStudents));
+}
+
 // State
 let currentDay = null;
 let currentClassInfo = null;
 let attendanceData = {};
 
 // DOM Elements
-const loginView = document.getElementById('loginView');
 const mainAppView = document.getElementById('mainAppView');
-const loginForm = document.getElementById('loginForm');
-const loginError = document.getElementById('loginError');
-const usernameInput = document.getElementById('username');
-const passwordInput = document.getElementById('password');
 
 const selectedDateEl = document.getElementById('selectedDate');
 const dayOrderSelection = document.getElementById('dayOrderSelection');
@@ -134,9 +133,29 @@ const attHourEl = document.getElementById('attHour');
 const attSubjectEl = document.getElementById('attSubject');
 const successModal = document.getElementById('successModal');
 
+// Admin Elements
+const adminView = document.getElementById('adminView');
+const adminStudentsList = document.getElementById('adminStudentsList');
+const adminPanelBtn = document.getElementById('adminPanelBtn');
+const backFromAdmin = document.getElementById('backFromAdmin');
+const openAdminAddStudentBtn = document.getElementById('openAdminAddStudentBtn');
+
+const editStudentModal = document.getElementById('editStudentModal');
+const editStudentRoll = document.getElementById('editStudentRoll');
+const editStudentName = document.getElementById('editStudentName');
+const editStudentOldRoll = document.getElementById('editStudentOldRoll');
+const cancelEditStudentBtn = document.getElementById('cancelEditStudentBtn');
+const confirmEditStudentBtn = document.getElementById('confirmEditStudentBtn');
+
+const adminLoginModal = document.getElementById('adminLoginModal');
+const adminLoginForm = document.getElementById('adminLoginForm');
+const adminUsernameInput = document.getElementById('adminUsername');
+const adminPasswordInput = document.getElementById('adminPassword');
+const adminLoginError = document.getElementById('adminLoginError');
+const cancelAdminLoginBtn = document.getElementById('cancelAdminLoginBtn');
+
 // Header Buttons
 const viewLogsBtn = document.getElementById('viewLogsBtn');
-const lockSystemBtn = document.getElementById('lockSystemBtn');
 const backFromLogs = document.getElementById('backFromLogs');
 
 // Add Student Elements
@@ -149,22 +168,6 @@ const newStudentNameInput = document.getElementById('newStudentName');
 
 // Init
 function init() {
-    // Login Form Handler
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const user = usernameInput.value.trim();
-        const pass = passwordInput.value;
-        
-        // Simple hardcoded check - change as needed
-        if (user === 'admin' && pass === 'password123') {
-            loginView.classList.add('hidden');
-            mainAppView.classList.remove('hidden');
-            loginError.classList.add('hidden');
-        } else {
-            loginError.classList.remove('hidden');
-        }
-    });
-
     // Set Current Date in Date Picker
     const today = new Date();
     // Format YYYY-MM-DD for the input[type="date"]
@@ -224,20 +227,77 @@ function init() {
 
         // Add to array
         dummyStudents.push({ id: roll, name: name });
+        saveStudents();
         
         // Close modal
         addStudentModal.classList.add('hidden');
         
-        // Re-render attendance view to show new student
-        openAttendance(currentClassInfo);
+        // If in admin view, re-render admin view, else re-render attendance view
+        if (!adminView.classList.contains('hidden')) {
+            openAdminPanel();
+        } else if (currentClassInfo) {
+            openAttendance(currentClassInfo);
+        }
     });
 
-    // Lock System & Logs Logic
-    lockSystemBtn.addEventListener('click', () => {
-        mainAppView.classList.add('hidden');
-        loginView.classList.remove('hidden');
-        usernameInput.value = '';
-        passwordInput.value = '';
+    // Admin Panel logic
+    adminPanelBtn.addEventListener('click', () => {
+        adminUsernameInput.value = '';
+        adminPasswordInput.value = '';
+        adminLoginError.classList.add('hidden');
+        adminLoginModal.classList.remove('hidden');
+    });
+
+    cancelAdminLoginBtn.addEventListener('click', () => {
+        adminLoginModal.classList.add('hidden');
+    });
+
+    adminLoginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const user = adminUsernameInput.value.trim();
+        const pass = adminPasswordInput.value;
+        
+        if (user === 'admin' && pass === 'password123') {
+            adminLoginModal.classList.add('hidden');
+            openAdminPanel();
+        } else {
+            adminLoginError.classList.remove('hidden');
+        }
+    });
+
+    backFromAdmin.addEventListener('click', () => {
+        adminView.classList.add('hidden');
+        dayOrderSelection.classList.remove('hidden');
+    });
+
+    openAdminAddStudentBtn.addEventListener('click', () => {
+        newStudentRollInput.value = '';
+        newStudentNameInput.value = '';
+        addStudentModal.classList.remove('hidden');
+    });
+
+    cancelEditStudentBtn.addEventListener('click', () => {
+        editStudentModal.classList.add('hidden');
+    });
+
+    confirmEditStudentBtn.addEventListener('click', () => {
+        const oldRoll = editStudentOldRoll.value;
+        const newRoll = editStudentRoll.value.trim();
+        const newName = editStudentName.value.trim();
+
+        if (!newRoll || !newName) {
+            alert("Please fill in both Roll Number and Name.");
+            return;
+        }
+
+        const index = dummyStudents.findIndex(s => s.id === oldRoll);
+        if (index > -1) {
+            dummyStudents[index].id = newRoll;
+            dummyStudents[index].name = newName;
+            saveStudents();
+            editStudentModal.classList.add('hidden');
+            openAdminPanel(); // Re-render list
+        }
     });
 
     viewLogsBtn.addEventListener('click', fetchLogs);
@@ -245,6 +305,61 @@ function init() {
     backFromLogs.addEventListener('click', () => {
         logsView.classList.add('hidden');
         dayOrderSelection.classList.remove('hidden');
+    });
+}
+function openAdminPanel() {
+    dayOrderSelection.classList.add('hidden');
+    scheduleView.classList.add('hidden');
+    attendanceView.classList.add('hidden');
+    logsView.classList.add('hidden');
+    adminView.classList.remove('hidden');
+
+    adminStudentsList.innerHTML = '';
+
+    dummyStudents.forEach(student => {
+        const initials = student.name.substring(0, 2).toUpperCase();
+
+        const div = document.createElement('div');
+        div.className = 'student-card';
+        div.innerHTML = `
+            <div class="student-info">
+                <div class="student-avatar">${initials}</div>
+                <div>
+                    <div class="student-name">${student.name}</div>
+                    <div class="student-roll">Roll No: ${student.id}</div>
+                </div>
+            </div>
+            <div class="attendance-actions">
+                <button class="secondary-btn edit-student-btn" data-id="${student.id}" title="Edit Student" style="padding: 0.5rem 1rem; margin-right: 0.5rem;">
+                    <i class="fa-solid fa-pen"></i> Edit
+                </button>
+                <button class="delete-student-btn" data-id="${student.id}" title="Remove Student">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>
+        `;
+
+        adminStudentsList.appendChild(div);
+
+        // Edit listener
+        div.querySelector('.edit-student-btn').addEventListener('click', () => {
+            editStudentOldRoll.value = student.id;
+            editStudentRoll.value = student.id;
+            editStudentName.value = student.name;
+            editStudentModal.classList.remove('hidden');
+        });
+
+        // Delete listener
+        div.querySelector('.delete-student-btn').addEventListener('click', () => {
+            if (confirm(`Are you sure you want to remove ${student.name}?`)) {
+                const index = dummyStudents.findIndex(s => s.id === student.id);
+                if (index > -1) {
+                    dummyStudents.splice(index, 1);
+                    saveStudents();
+                    openAdminPanel(); // Re-render list
+                }
+            }
+        });
     });
 }
 
@@ -428,6 +543,7 @@ function openAttendance(classItem) {
                     const index = dummyStudents.findIndex(s => s.id === student.id);
                     if(index > -1) {
                         dummyStudents.splice(index, 1);
+                        saveStudents();
                         openAttendance(currentClassInfo); // Re-render list
                     }
                 }

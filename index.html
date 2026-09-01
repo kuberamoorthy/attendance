@@ -15,36 +15,9 @@
         <div class="shape shape-3"></div>
     </div>
 
-    <!-- Login Screen -->
-    <main class="login-container" id="loginView">
-        <div class="glass-panel login-box">
-            <div class="login-header">
-                <img src="image.png" alt="AVVMSC Logo" class="login-logo" onerror="this.src='https://placehold.co/100x100?text=Logo'">
-                <h2>Welcome Back</h2>
-                <p>AVVMSC POONDIANZ BCA</p>
-            </div>
-            <form id="loginForm" class="login-form">
-                <div class="input-group">
-                    <label for="username">Username</label>
-                    <div class="input-wrapper">
-                        <i class="fa-solid fa-user"></i>
-                        <input type="text" id="username" placeholder="Enter username" required autocomplete="username">
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label for="password">Password</label>
-                    <div class="input-wrapper">
-                        <i class="fa-solid fa-lock"></i>
-                        <input type="password" id="password" placeholder="Enter password" required autocomplete="current-password">
-                    </div>
-                </div>
-                <p id="loginError" class="error-msg hidden">Invalid username or password</p>
-                <button type="submit" class="primary-btn login-btn w-full mt-2">Login</button>
-            </form>
-        </div>
-    </main>
+    <!-- Phone Login Removed -->
 
-    <main class="app-container hidden" id="mainAppView">
+    <main class="app-container" id="mainAppView">
         <header class="glass-panel header">
             <div class="logo">
                 <img src="image.png" alt="Logo" class="app-logo" onerror="this.src='https://placehold.co/50x50?text=Logo'">
@@ -55,7 +28,7 @@
                     <input type="date" id="selectedDate" class="date-picker" title="Select Date for Attendance">
                 </div>
                 <button id="viewLogsBtn" class="secondary-btn header-btn" title="Saved Attendance Logs"><i class="fa-solid fa-table-list"></i> Logs</button>
-                <button id="lockSystemBtn" class="secondary-btn header-btn danger-btn" title="Lock System"><i class="fa-solid fa-lock"></i> Lock</button>
+                <button id="adminPanelBtn" class="secondary-btn header-btn" title="Admin Panel"><i class="fa-solid fa-user-shield"></i> Admin</button>
             </div>
         </header>
 
@@ -121,6 +94,16 @@
                 <button id="submitAttendanceBtn" class="primary-btn">Save Hour Attendance</button>
             </div>
         </section>
+        <section id="adminView" class="glass-panel section-container hidden">
+            <div class="section-header">
+                <button class="back-btn" id="backFromAdmin"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                <h2>Manage Students</h2>
+                <button class="icon-btn" id="openAdminAddStudentBtn" title="Add Student"><i class="fa-solid fa-plus"></i></button>
+            </div>
+            <div class="students-list" id="adminStudentsList">
+                <!-- Admin students dynamically injected here -->
+            </div>
+        </section>
     </main>
 
     <!-- Success Modal -->
@@ -153,7 +136,56 @@
             </div>
         </div>
     </div>
+
+    <!-- Edit Student Modal -->
+    <div id="editStudentModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 class="modal-title">Edit Student</h3>
+            <input type="hidden" id="editStudentOldRoll">
+            <div class="input-group text-left mb-1">
+                <label for="editStudentRoll">Roll Number / ID</label>
+                <input type="text" id="editStudentRoll" class="simple-input">
+            </div>
+            <div class="input-group text-left mb-2">
+                <label for="editStudentName">Student Name</label>
+                <input type="text" id="editStudentName" class="simple-input">
+            </div>
+            <div class="flex-gap-1">
+                <button class="secondary-btn flex-1" id="cancelEditStudentBtn">Cancel</button>
+                <button class="primary-btn flex-1" id="confirmEditStudentBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div id="adminLoginModal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 350px;">
+            <h3 class="modal-title">Admin Access</h3>
+            <form id="adminLoginForm">
+                <div class="input-group text-left mb-1">
+                    <label for="adminUsername">Username</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" id="adminUsername" placeholder="Enter username" required autocomplete="username" class="simple-input" style="padding-left: 2.5rem;">
+                    </div>
+                </div>
+                <div class="input-group text-left mb-2">
+                    <label for="adminPassword">Password</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="adminPassword" placeholder="Enter password" required autocomplete="current-password" class="simple-input" style="padding-left: 2.5rem;">
+                    </div>
+                </div>
+                <p id="adminLoginError" class="error-msg hidden" style="margin-bottom: 1rem;">Invalid credentials</p>
+                <div class="flex-gap-1">
+                    <button type="button" class="secondary-btn flex-1" id="cancelAdminLoginBtn">Cancel</button>
+                    <button type="submit" class="primary-btn flex-1">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="app.js"></script>
