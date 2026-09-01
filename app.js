@@ -135,7 +135,6 @@ const dayOrderSelection = document.getElementById('dayOrderSelection');
 const scheduleView = document.getElementById('scheduleView');
 const attendanceView = document.getElementById('attendanceView');
 const logsView = document.getElementById('logsView');
-const logsTableBody = document.getElementById('logsTableBody');
 const dateDetailsView = document.getElementById('dateDetailsView');
 const timelineContainer = document.getElementById('timelineContainer');
 const currentDayOrderEl = document.getElementById('currentDayOrder');
@@ -417,10 +416,15 @@ function openAdminPanel() {
     });
 }
 
+// Store all fetched logs globally for reuse
+let allLogsData = [];
+
 async function fetchLogs() {
-    logsTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Loading logs...</td></tr>';
     dayOrderSelection.classList.add('hidden');
     logsView.classList.remove('hidden');
+
+    const dateChipsContainer = document.getElementById('dateChipsContainer');
+    dateChipsContainer.innerHTML = '<span style="color: var(--text-muted);">Loading...</span>';
 
     try {
         let rawLogs = [];
@@ -438,16 +442,15 @@ async function fetchLogs() {
             rawLogs = localRecords;
         }
 
-        logsTableBody.innerHTML = '';
+        allLogsData = rawLogs;
         
         if (rawLogs.length === 0) {
-            logsTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No attendance logs found.</td></tr>';
+            dateChipsContainer.innerHTML = '<span style="color: var(--text-muted); font-style: italic;">No attendance logs found yet.</span>';
             return;
         }
         
         // Group logs by Date
         const groupedData = {};
-        
         rawLogs.forEach(log => {
             if (!groupedData[log.date]) {
                 groupedData[log.date] = {
@@ -466,50 +469,50 @@ async function fetchLogs() {
         });
         
         const groupedLogs = Object.values(groupedData);
-        
-        // Sort newest date first
         groupedLogs.sort((a, b) => new Date(b.date) - new Date(a.date));
 
+        // Render clickable date chips
+        dateChipsContainer.innerHTML = '';
         groupedLogs.forEach(log => {
-            const totalPresent = log.totalPresent;
-            const totalAbsent = log.totalAbsent;
+            const chip = document.createElement('button');
+            const dateObj = new Date(log.date + 'T00:00:00');
+            const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+            const displayDate = dateObj.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
             
-            const totalSlots = totalPresent + totalAbsent;
-            const percentage = totalSlots > 0 ? Math.round((totalPresent / totalSlots) * 100) : 0;
-            
-            let progressColor = 'var(--success)';
-            if (percentage < 75) progressColor = '#f59e0b'; // warning orange
-            if (percentage < 50) progressColor = 'var(--danger)'; // danger red
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${log.date}</td>
-                <td><span style="background: rgba(59, 130, 246, 0.15); color: var(--primary-color); padding: 0.3rem 0.8rem; border-radius: 8px; font-weight: 700;">Day ${log.dayOrder}</span></td>
-                <td><strong>${log.hoursTaken}</strong> <span style="color: var(--text-muted); font-size: 0.9rem;">/ 5 Hours</span></td>
-                <td style="color: var(--success); font-weight: bold; font-size: 1.1rem;">${totalPresent}</td>
-                <td style="color: var(--danger); font-weight: bold; font-size: 1.1rem;">${totalAbsent}</td>
-                <td style="min-width: 120px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                        <span style="font-size: 0.85rem; font-weight: 700; color: ${progressColor};">${percentage}%</span>
-                    </div>
-                    <div style="background: rgba(0,0,0,0.05); border-radius: 12px; overflow: hidden; width: 100%; height: 6px;">
-                        <div style="background: ${progressColor}; height: 100%; width: ${percentage}%; border-radius: 12px;"></div>
-                    </div>
-                </td>
-                <td>
-                    <button class="secondary-btn view-details-btn" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">View Details</button>
-                </td>
+            chip.className = 'day-btn';
+            chip.style.cssText = 'padding: 0.6rem 1rem; font-size: 0.9rem; min-width: auto; display: flex; flex-direction: column; align-items: center; gap: 0.2rem;';
+            chip.innerHTML = `
+                <span style="font-weight: 800; font-size: 1rem;">${displayDate}</span>
+                <span style="font-size: 0.75rem; opacity: 0.7;">${dayName} · Day ${log.dayOrder}</span>
             `;
-            
-            tr.querySelector('.view-details-btn').addEventListener('click', () => {
-                openDateDetails(log);
-            });
-            
-            logsTableBody.appendChild(tr);
+            chip.addEventListener('click', () => openDateDetails(log));
+            dateChipsContainer.appendChild(chip);
         });
 
+        // Set date picker default to today
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        document.getElementById('logsDatePicker').value = `${yyyy}-${mm}-${dd}`;
+
+        // Search button listener
+        document.getElementById('searchLogsBtn').onclick = () => {
+            const selectedDate = document.getElementById('logsDatePicker').value;
+            if (!selectedDate) {
+                alert('Please select a date first!');
+                return;
+            }
+            const match = groupedLogs.find(l => l.date === selectedDate);
+            if (match) {
+                openDateDetails(match);
+            } else {
+                alert(`No attendance records found for ${selectedDate}`);
+            }
+        };
+
     } catch(e) {
-        logsTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger);">Error fetching logs: ${e.message}</td></tr>`;
+        dateChipsContainer.innerHTML = `<span style="color: var(--danger);">Error loading logs: ${e.message}</span>`;
         console.error(e);
     }
 }
@@ -518,11 +521,76 @@ function openDateDetails(logData) {
     logsView.classList.add('hidden');
     dateDetailsView.classList.remove('hidden');
     
-    document.getElementById('detailsDateHeading').textContent = `Details for ${logData.date}`;
+    const dateObj = new Date(logData.date + 'T00:00:00');
+    const displayDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+    document.getElementById('detailsDateHeading').textContent = displayDate;
+
+    // Summary Cards
+    const totalPresent = logData.totalPresent;
+    const totalAbsent = logData.totalAbsent;
+    const totalSlots = totalPresent + totalAbsent;
+    const percentage = totalSlots > 0 ? Math.round((totalPresent / totalSlots) * 100) : 0;
+    
+    let progressColor = 'var(--success)';
+    if (percentage < 75) progressColor = '#f59e0b';
+    if (percentage < 50) progressColor = 'var(--danger)';
+
+    const summaryCard = document.getElementById('dateSummaryCard');
+    summaryCard.innerHTML = `
+        <div style="flex: 1; min-width: 120px; background: rgba(59,130,246,0.08); border-radius: 12px; padding: 0.8rem 1rem; text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">Day Order</div>
+            <div style="font-size: 1.5rem; font-weight: 800; color: var(--primary-color);">Day ${logData.dayOrder}</div>
+        </div>
+        <div style="flex: 1; min-width: 120px; background: rgba(16,185,129,0.08); border-radius: 12px; padding: 0.8rem 1rem; text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">Hours Taken</div>
+            <div style="font-size: 1.5rem; font-weight: 800; color: var(--success);">${logData.hoursTaken} <span style="font-size: 0.9rem; opacity: 0.7;">/ 5</span></div>
+        </div>
+        <div style="flex: 1; min-width: 120px; background: rgba(16,185,129,0.08); border-radius: 12px; padding: 0.8rem 1rem; text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">Total Present</div>
+            <div style="font-size: 1.5rem; font-weight: 800; color: var(--success);">${totalPresent}</div>
+        </div>
+        <div style="flex: 1; min-width: 120px; background: rgba(239,68,68,0.08); border-radius: 12px; padding: 0.8rem 1rem; text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">Total Absent</div>
+            <div style="font-size: 1.5rem; font-weight: 800; color: var(--danger);">${totalAbsent}</div>
+        </div>
+        <div style="flex: 1; min-width: 120px; background: rgba(0,0,0,0.03); border-radius: 12px; padding: 0.8rem 1rem; text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">Overall %</div>
+            <div style="font-size: 1.5rem; font-weight: 800; color: ${progressColor};">${percentage}%</div>
+            <div style="background: rgba(0,0,0,0.05); border-radius: 12px; overflow: hidden; width: 100%; height: 6px; margin-top: 0.4rem;">
+                <div style="background: ${progressColor}; height: 100%; width: ${percentage}%; border-radius: 12px;"></div>
+            </div>
+        </div>
+    `;
+
+    // Delete button
+    document.getElementById('deleteDateBtn').onclick = async () => {
+        if (!confirm(`Delete ALL records for ${logData.date}? This cannot be undone!`)) return;
+
+        let localRecords = JSON.parse(localStorage.getItem('attendance_records')) || [];
+        localRecords = localRecords.filter(r => r.date !== logData.date);
+        localStorage.setItem('attendance_records', JSON.stringify(localRecords));
+
+        if (isFirebaseConfigured() && db) {
+            try {
+                const snapshot = await db.collection('attendance_records')
+                    .where('date', '==', logData.date).get();
+                const batch = db.batch();
+                snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+            } catch (e) {
+                console.warn('Could not delete from Firebase:', e);
+            }
+        }
+
+        alert('✅ Records deleted successfully!');
+        dateDetailsView.classList.add('hidden');
+        fetchLogs();
+    };
+
+    // Hour-by-hour table
     const tbody = document.getElementById('dateDetailsTableBody');
     tbody.innerHTML = '';
     
-    // Sort records by hour
     logData.records.sort((a, b) => parseInt(a.hour) - parseInt(b.hour));
     
     logData.records.forEach(record => {
