@@ -1,10 +1,11 @@
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY", // IMPORTANT: You MUST paste your Firebase API key here!
+  apiKey: "AIzaSyCpCqZ9Tr0pJOeife66YLaV2jjM6La132E",
   authDomain: "attendance-a1a8d.firebaseapp.com",
   projectId: "attendance-a1a8d",
-  storageBucket: "attendance-a1a8d.appspot.com",
+  storageBucket: "attendance-a1a8d.firebasestorage.app",
   messagingSenderId: "697722308252",
-  appId: "1:697722308252:web:your_app_id", // IMPORTANT: You MUST paste your App ID here!
+  appId: "1:697722308252:web:464cda5d2c410f3ac04f59",
+  measurementId: "G-RY9V6V498H"
 };
 
 let app, db;

@@ -336,6 +336,30 @@ function init() {
         dateDetailsView.classList.add('hidden');
         logsView.classList.remove('hidden');
     });
+
+    // Clear All Data Button
+    document.getElementById('clearAllDataBtn').addEventListener('click', async () => {
+        if (!confirm('⚠️ Are you sure you want to DELETE ALL attendance records? This cannot be undone!')) return;
+        if (!confirm('This is your FINAL warning. All attendance data will be permanently erased. Continue?')) return;
+
+        // Clear localStorage
+        localStorage.removeItem('attendance_records');
+
+        // Clear Firebase if configured
+        if (isFirebaseConfigured() && db) {
+            try {
+                const snapshot = await db.collection('attendance_records').get();
+                const batch = db.batch();
+                snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                console.log('Firebase attendance records cleared.');
+            } catch (e) {
+                console.warn('Could not clear Firebase records:', e);
+            }
+        }
+
+        alert('✅ All attendance data has been cleared successfully!');
+    });
 }
 function openAdminPanel() {
     dayOrderSelection.classList.add('hidden');
