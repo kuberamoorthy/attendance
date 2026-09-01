@@ -117,6 +117,16 @@ let currentDay = null;
 let currentClassInfo = null;
 let attendanceData = {};
 
+function isFirebaseConfigured() {
+    if (typeof firebase === 'undefined' || !firebase.app) return false;
+    try {
+        const key = firebase.app().options.apiKey;
+        return key && key !== "YOUR_API_KEY";
+    } catch(e) {
+        return false;
+    }
+}
+
 // DOM Elements
 const mainAppView = document.getElementById('mainAppView');
 
@@ -372,7 +382,7 @@ async function fetchLogs() {
         let rawLogs = [];
         const localRecords = JSON.parse(localStorage.getItem('attendance_records')) || [];
 
-        if (db) {
+        if (isFirebaseConfigured() && db) {
             try {
                 const querySnapshot = await db.collection("attendance_records").get();
                 querySnapshot.forEach((doc) => rawLogs.push(doc.data()));
@@ -608,13 +618,13 @@ async function submitAttendance() {
         localRecords.push({ id: docId, ...recordData });
         localStorage.setItem('attendance_records', JSON.stringify(localRecords));
 
-        if (!db) {
+        if (!isFirebaseConfigured() || !db) {
             console.warn("Firebase not fully configured. Attendance saved to localStorage for demo.");
             setTimeout(() => {
                 successModal.classList.remove('hidden');
                 btn.innerHTML = originalText;
                 btn.disabled = false;
-            }, 1000);
+            }, 500);
             return;
         }
         
@@ -624,15 +634,13 @@ async function submitAttendance() {
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         }).catch(e => {
             console.error("Background save error: ", e);
-            if (e.message && e.message.includes('API key')) {
-                console.warn("API Key missing, but UI already updated.");
-            }
         });
 
-        console.log("Document save initiated Date-Wise with ID: ", docId);
-        
-        // Show success instantly!
-        successModal.classList.remove('hidden');
+        setTimeout(() => {
+            successModal.classList.remove('hidden');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }, 500);
         
     } catch (e) {
         console.error("Error preparing document: ", e);
