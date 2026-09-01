@@ -21,14 +21,24 @@
         <header class="glass-panel header">
             <div class="logo">
                 <img src="image.png" alt="Logo" class="app-logo" onerror="this.src='https://placehold.co/50x50?text=Logo'">
-                <h1>Attendance Portal</h1>
-            </div>
-            <div class="header-actions">
-                <div class="date-selection">
-                    <input type="date" id="selectedDate" class="date-picker" title="Select Date for Attendance">
+                <div>
+                    <h1>AVVMSC POONDIANZ</h1>
+                    <p>Department of BCA</p>
                 </div>
-                <button id="viewLogsBtn" class="secondary-btn header-btn" title="Saved Attendance Logs"><i class="fa-solid fa-table-list"></i> Logs</button>
-                <button id="adminPanelBtn" class="secondary-btn header-btn" title="Admin Panel"><i class="fa-solid fa-user-shield"></i> Admin</button>
+            </div>
+            <div class="header-actions" style="display: flex; align-items: center; gap: 0.8rem;">
+                <div class="date-selection">
+                    <input type="date" id="selectedDate" class="date-picker" title="Select Date for Attendance" style="padding: 0.4rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.7); font-weight: bold; color: var(--text-main);">
+                </div>
+                <div id="firebaseStatus" style="padding: 0.3rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; gap: 0.3rem; white-space: nowrap;">
+                    Checking...
+                </div>
+                <button class="primary-btn" id="viewLogsBtn" style="padding: 0.5rem 1rem;">
+                    <i class="fa-solid fa-list-check"></i> View Logs
+                </button>
+                <button class="icon-btn" id="adminPanelBtn" title="Admin Access">
+                    <i class="fa-solid fa-lock"></i>
+                </button>
             </div>
         </header>
 
@@ -56,13 +66,39 @@
                             <th>Date</th>
                             <th>Day Order</th>
                             <th>Hours Recorded</th>
-                            <th>Avg Present</th>
-                            <th>Avg Absent</th>
+                            <th>Present</th>
+                            <th>Absent</th>
                             <th>Overall %</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody id="logsTableBody">
                         <!-- Logs dynamically injected -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Date Details View -->
+        <section id="dateDetailsView" class="glass-panel section-container hidden">
+            <div class="section-header">
+                <button class="back-btn" id="backFromDateDetails"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                <h2 id="detailsDateHeading">Date Details</h2>
+            </div>
+            
+            <div class="table-container">
+                <table class="logs-table">
+                    <thead>
+                        <tr>
+                            <th>Hour</th>
+                            <th>Subject</th>
+                            <th>Present</th>
+                            <th>Absent</th>
+                            <th>Absentees List</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dateDetailsTableBody">
+                        <!-- Hour details dynamically injected here -->
                     </tbody>
                 </table>
             </div>

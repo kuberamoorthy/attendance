@@ -136,6 +136,7 @@ const scheduleView = document.getElementById('scheduleView');
 const attendanceView = document.getElementById('attendanceView');
 const logsView = document.getElementById('logsView');
 const logsTableBody = document.getElementById('logsTableBody');
+const dateDetailsView = document.getElementById('dateDetailsView');
 const timelineContainer = document.getElementById('timelineContainer');
 const currentDayOrderEl = document.getElementById('currentDayOrder');
 const studentsListEl = document.getElementById('studentsList');
@@ -185,6 +186,20 @@ function init() {
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
     selectedDateEl.value = `${yyyy}-${mm}-${dd}`;
+    
+    // Update Firebase Status Badge
+    const statusBadge = document.getElementById('firebaseStatus');
+    if (isFirebaseConfigured()) {
+        statusBadge.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
+        statusBadge.style.color = 'var(--success)';
+        statusBadge.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Cloud Active';
+        statusBadge.title = 'Saving data to Firebase Cloud Database';
+    } else {
+        statusBadge.style.backgroundColor = 'rgba(245, 158, 11, 0.1)';
+        statusBadge.style.color = '#f59e0b';
+        statusBadge.innerHTML = '<i class="fa-solid fa-hard-drive"></i> Local Mode';
+        statusBadge.title = 'Add your API Key in firebase-config.js to activate cloud saving';
+    }
 
     // Event Listeners for Day Selection
     document.querySelectorAll('.day-btn').forEach(btn => {
@@ -316,6 +331,11 @@ function init() {
         logsView.classList.add('hidden');
         dayOrderSelection.classList.remove('hidden');
     });
+
+    document.getElementById('backFromDateDetails').addEventListener('click', () => {
+        dateDetailsView.classList.add('hidden');
+        logsView.classList.remove('hidden');
+    });
 }
 function openAdminPanel() {
     dayOrderSelection.classList.add('hidden');
@@ -411,12 +431,14 @@ async function fetchLogs() {
                     dayOrder: log.dayOrder,
                     hoursTaken: 0,
                     totalPresent: 0,
-                    totalAbsent: 0
+                    totalAbsent: 0,
+                    records: []
                 };
             }
             groupedData[log.date].hoursTaken++;
             groupedData[log.date].totalPresent += log.presentCount;
             groupedData[log.date].totalAbsent += log.absentCount;
+            groupedData[log.date].records.push(log);
         });
         
         const groupedLogs = Object.values(groupedData);
@@ -425,11 +447,11 @@ async function fetchLogs() {
         groupedLogs.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         groupedLogs.forEach(log => {
-            const avgPresent = Math.round(log.totalPresent / log.hoursTaken);
-            const avgAbsent = Math.round(log.totalAbsent / log.hoursTaken);
+            const totalPresent = log.totalPresent;
+            const totalAbsent = log.totalAbsent;
             
-            const totalSlots = log.totalPresent + log.totalAbsent;
-            const percentage = totalSlots > 0 ? Math.round((log.totalPresent / totalSlots) * 100) : 0;
+            const totalSlots = totalPresent + totalAbsent;
+            const percentage = totalSlots > 0 ? Math.round((totalPresent / totalSlots) * 100) : 0;
             
             let progressColor = 'var(--success)';
             if (percentage < 75) progressColor = '#f59e0b'; // warning orange
@@ -440,8 +462,8 @@ async function fetchLogs() {
                 <td>${log.date}</td>
                 <td><span style="background: rgba(59, 130, 246, 0.15); color: var(--primary-color); padding: 0.3rem 0.8rem; border-radius: 8px; font-weight: 700;">Day ${log.dayOrder}</span></td>
                 <td><strong>${log.hoursTaken}</strong> <span style="color: var(--text-muted); font-size: 0.9rem;">/ 5 Hours</span></td>
-                <td style="color: var(--success); font-weight: bold; font-size: 1.1rem;">${avgPresent}</td>
-                <td style="color: var(--danger); font-weight: bold; font-size: 1.1rem;">${avgAbsent}</td>
+                <td style="color: var(--success); font-weight: bold; font-size: 1.1rem;">${totalPresent}</td>
+                <td style="color: var(--danger); font-weight: bold; font-size: 1.1rem;">${totalAbsent}</td>
                 <td style="min-width: 120px;">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
                         <span style="font-size: 0.85rem; font-weight: 700; color: ${progressColor};">${percentage}%</span>
@@ -450,14 +472,48 @@ async function fetchLogs() {
                         <div style="background: ${progressColor}; height: 100%; width: ${percentage}%; border-radius: 12px;"></div>
                     </div>
                 </td>
+                <td>
+                    <button class="secondary-btn view-details-btn" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">View Details</button>
+                </td>
             `;
+            
+            tr.querySelector('.view-details-btn').addEventListener('click', () => {
+                openDateDetails(log);
+            });
+            
             logsTableBody.appendChild(tr);
         });
 
     } catch(e) {
-        logsTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger);">Error fetching logs: ${e.message}</td></tr>`;
+        logsTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger);">Error fetching logs: ${e.message}</td></tr>`;
         console.error(e);
     }
+}
+
+function openDateDetails(logData) {
+    logsView.classList.add('hidden');
+    dateDetailsView.classList.remove('hidden');
+    
+    document.getElementById('detailsDateHeading').textContent = `Details for ${logData.date}`;
+    const tbody = document.getElementById('dateDetailsTableBody');
+    tbody.innerHTML = '';
+    
+    // Sort records by hour
+    logData.records.sort((a, b) => parseInt(a.hour) - parseInt(b.hour));
+    
+    logData.records.forEach(record => {
+        const absenteesNames = record.absent.map(s => s.name).join(', ') || 'None';
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>Hour ${record.hour}</strong></td>
+            <td>${record.subject} <br><span style="font-size: 0.85rem; color: var(--text-muted);">${record.staff}</span></td>
+            <td style="color: var(--success); font-weight: bold;">${record.presentCount}</td>
+            <td style="color: var(--danger); font-weight: bold;">${record.absentCount}</td>
+            <td style="font-size: 0.9rem; max-width: 250px;">${absenteesNames}</td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
 function openSchedule(day) {
@@ -529,9 +585,6 @@ function openAttendance(classItem) {
                         <span class="slider"></span>
                     </label>
                 </div>
-                <button class="delete-student-btn" data-id="${student.id}" title="Remove Student">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>
             </div>
         `;
         
@@ -550,18 +603,6 @@ function openAttendance(classItem) {
                 } else {
                     statusText.textContent = 'Absent';
                     statusText.className = 'status-text status-absent';
-                }
-            });
-
-            // Delete listener
-            document.querySelector(`.delete-student-btn[data-id="${student.id}"]`).addEventListener('click', () => {
-                if(confirm(`Are you sure you want to remove ${student.name}?`)) {
-                    const index = dummyStudents.findIndex(s => s.id === student.id);
-                    if(index > -1) {
-                        dummyStudents.splice(index, 1);
-                        saveStudents();
-                        openAttendance(currentClassInfo); // Re-render list
-                    }
                 }
             });
         }, 0);
