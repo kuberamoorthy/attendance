@@ -369,21 +369,27 @@ async function fetchLogs() {
     logsView.classList.remove('hidden');
 
     try {
-        if (!db) {
-            logsTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger);">Firebase not initialized. Check API Key.</td></tr>`;
-            return;
+        let rawLogs = [];
+        const localRecords = JSON.parse(localStorage.getItem('attendance_records')) || [];
+
+        if (db) {
+            try {
+                const querySnapshot = await db.collection("attendance_records").get();
+                querySnapshot.forEach((doc) => rawLogs.push(doc.data()));
+            } catch (e) {
+                console.warn("Failed to fetch from Firebase, falling back to LocalStorage.", e);
+                rawLogs = localRecords;
+            }
+        } else {
+            rawLogs = localRecords;
         }
-        
-        const querySnapshot = await db.collection("attendance_records").get();
+
         logsTableBody.innerHTML = '';
         
-        if (querySnapshot.empty) {
+        if (rawLogs.length === 0) {
             logsTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No attendance logs found.</td></tr>';
             return;
         }
-
-        const rawLogs = [];
-        querySnapshot.forEach((doc) => rawLogs.push(doc.data()));
         
         // Group logs by Date
         const groupedData = {};
@@ -562,16 +568,6 @@ async function submitAttendance() {
     btn.disabled = true;
 
     try {
-        if (!db) {
-            console.warn("Firebase not fully configured (missing API key). Showing success modal for demo purposes.");
-            setTimeout(() => {
-                successModal.classList.remove('hidden');
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }, 1000);
-            return;
-        }
-
         const chosenDate = selectedDateEl.value; // YYYY-MM-DD
 
         // Prepare data
@@ -592,9 +588,8 @@ async function submitAttendance() {
 
         // Unique document ID: YYYY-MM-DD_DayX_HourY
         const docId = `${chosenDate}_Day${currentDay}_Hr${currentClassInfo.hour}`;
-        
-        // Save in the background (Optimistic UI Update) - DO NOT AWAIT
-        db.collection("attendance_records").doc(docId).set({
+
+        const recordData = {
             date: chosenDate,
             dayOrder: currentDay,
             hour: currentClassInfo.hour,
@@ -604,6 +599,28 @@ async function submitAttendance() {
             absentCount: absentCount,
             present: presentStudents,
             absent: absentStudents,
+            timestamp: new Date().toISOString()
+        };
+
+        // Fallback: Save to LocalStorage
+        let localRecords = JSON.parse(localStorage.getItem('attendance_records')) || [];
+        localRecords = localRecords.filter(r => r.id !== docId); // Overwrite same slot
+        localRecords.push({ id: docId, ...recordData });
+        localStorage.setItem('attendance_records', JSON.stringify(localRecords));
+
+        if (!db) {
+            console.warn("Firebase not fully configured. Attendance saved to localStorage for demo.");
+            setTimeout(() => {
+                successModal.classList.remove('hidden');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 1000);
+            return;
+        }
+        
+        // Save in the background (Optimistic UI Update) - DO NOT AWAIT
+        db.collection("attendance_records").doc(docId).set({
+            ...recordData,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         }).catch(e => {
             console.error("Background save error: ", e);
